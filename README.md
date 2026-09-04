@@ -80,3 +80,13 @@ npm run dev
 ```
 
 3. Abre [http://localhost:3000](http://localhost:3000), crea un grupo y compártelo por nombre. Abre el mismo grupo en dos pestañas para ver el tiempo real.
+
+<!-- BEGIN cc:que-se-valora -->
+¡Hola! Aquí te explico qué miraremos con lupa cuando corrijamos tu proyecto de "Reparto Gastos".
+
+## 📋 Qué se valora
+
+Lo que más pesa es que tu aplicación funcione tal y como se pide en el enunciado, resolviendo el problema de reparto de gastos de forma correcta y completa. También es muy importante que tu código esté bien estructurado y sea fácil de entender, mostrando que has pensado en cómo organizarlo. Le daremos un peso importante a tu vídeo demo, donde nos enseñarás cómo funciona tu aplicación y qué hace. Finalmente, aunque con un peso menor, valoraremos que nos expliques tus decisiones y cómo has documentado tu proyecto.
+
+Recuerda que el enunciado del proyecto es la guía principal, y la evaluación no penalizará por cosas que no se pidan explícitamente allí.
+<!-- END cc:que-se-valora -->
