@@ -1,4 +1,6 @@
-import { randomBytes } from "node:crypto";
+import { randomInt } from "node:crypto";
+
+const SUFFIX_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
 
 /** "Viaje a Lisboa 2026!" → "viaje-a-lisboa-2026" */
 export function slugify(text: string): string {
@@ -17,7 +19,11 @@ export function slugify(text: string): string {
  * URL no sea adivinable (es la "llave" de acceso al grupo).
  */
 export function generateGroupSlug(name: string): string {
-  const suffix = randomBytes(4).toString("base64url").toLowerCase().slice(0, 6);
+  // Solo [a-z0-9] para que pase SLUG_PATTERN (base64url podía generar "_").
+  const suffix = Array.from(
+    { length: 6 },
+    () => SUFFIX_ALPHABET[randomInt(SUFFIX_ALPHABET.length)],
+  ).join("");
   const base = slugify(name) || "grupo";
   return `${base}-${suffix}`;
 }
