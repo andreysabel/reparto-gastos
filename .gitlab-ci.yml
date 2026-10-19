@@ -22,6 +22,8 @@ stages:
 
 default:
   image: node:24-slim
+  # El único runner compartido en línea solo acepta jobs con esta tag.
+  tags: [cloudrun]
   interruptible: true
   before_script:
     - cd reparto-gastos
