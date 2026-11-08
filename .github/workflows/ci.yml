@@ -1,0 +1,72 @@
+# Integración continua de la app (vive en reparto-gastos/).
+# Equivalente en GitHub Actions de .gitlab-ci.yml:
+#
+#   verify: lint, typecheck y tests en paralelo
+#   build:  next build (solo si verify pasa)
+#
+# No hace falta MongoDB: los tests usan mocks y el build prerenderiza
+# sin conectarse (los datos del grupo se leen en cada petición).
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["*"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+  CI: "true"
+
+defaults:
+  run:
+    working-directory: reparto-gastos
+
+jobs:
+  verify:
+    name: ${{ matrix.task }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        task: [lint, typecheck, test]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: reparto-gastos/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run ${{ matrix.task }}
+
+  build:
+    needs: verify
+    runs-on: ubuntu-latest
+    env:
+      # Falla rápido en vez de esperar 30 s al intento de conexión del build.
+      MONGODB_URI: "mongodb://127.0.0.1:27017/?serverSelectionTimeoutMS=1000"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: reparto-gastos/package-lock.json
+      - uses: actions/cache@v4
+        with:
+          path: reparto-gastos/.next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('reparto-gastos/package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('reparto-gastos/package-lock.json') }}-
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
