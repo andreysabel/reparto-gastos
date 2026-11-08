@@ -21,7 +21,7 @@ npm run dev                  # http://localhost:3000
 | --- | --- |
 | `npm run dev` | Servidor de desarrollo |
 | `npm run build && npm start` | Build y servidor de producción |
-| `npm test` | Tests del algoritmo de liquidación (`node:test`, sin dependencias) |
+| `npm test` / `npm run test:watch` | Tests automatizados con Vitest (ver [🧪 Tests](#-tests)); no necesitan MongoDB |
 | `npm run typecheck` / `npm run lint` | TypeScript estricto y ESLint |
 
 Para ver el tiempo real: crea un grupo, copia el enlace (botón con la URL) y ábrelo en otra pestaña o navegador. Lo que añadas en una aparece en la otra sin recargar.
@@ -122,6 +122,19 @@ Los tests (`npm test`) incluyen casos concretos y una prueba de propiedades sobr
 - **`LiveUpdates`**: ante cada evento llama a `router.refresh()`, que re-renderiza los Server Components (gastos, balances, liquidación) **sin recargar la página ni perder lo que estés escribiendo** en los formularios, y muestra un aviso ("Luis añadió «Cena» (30,00 €)").
 
 Eventos: `expense_added` (el pedido en el enunciado, con el gasto completo) y `member_added` (añadido para que los miembros nuevos aparezcan en el selector de los demás).
+
+## 🧪 Tests
+
+Vitest + React Testing Library (configuración en `vitest.config.mts` y `test/setup.ts`). Cada test vive junto al fichero que prueba (`*.test.ts(x)`). MongoDB y las APIs de Next (`revalidatePath`, `redirect`, `useRouter`) se sustituyen por mocks, así que `npm test` corre sin base de datos en unos segundos.
+
+| Capa | Ficheros | Qué se comprueba |
+|------|----------|------------------|
+| Algoritmo | `lib/settlement.test.ts` | Reparto al céntimo, balances, liquidación y propiedades sobre 200 grupos aleatorios |
+| Utilidades | `lib/money`, `lib/validation`, `lib/slug` | Parseo/formato de importes, normalización de nombres, slugs siempre válidos |
+| Server Actions | `lib/actions/*.test.ts` | Validaciones, normalización, versión del estado, publicación del evento SSE |
+| Datos | `lib/db/groups.test.ts` | Reintento ante colisión de slug, filtro atómico anti-duplicados |
+| Tiempo real | `lib/realtime/event-bus.test.ts`, `app/api/groups/[slug]/events/route.test.ts` | Pub/sub por grupo, formato SSE, 404 y limpieza al desconectar |
+| Componentes (jsdom) | `components/*.test.tsx` | Formulario de gasto, listas, panel de liquidación, búsqueda de grupo y avisos en vivo con un `EventSource` falso |
 
 ## 🤔 Decisiones de diseño
 

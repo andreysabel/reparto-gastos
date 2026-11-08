@@ -1,0 +1,89 @@
+# Integración continua de la app (vive en reparto-gastos/).
+#
+#   verify: lint, typecheck y tests en paralelo
+#   build:  next build (solo si verify pasa)
+#
+# No hace falta MongoDB: los tests usan mocks y el build prerenderiza
+# sin conectarse (los datos del grupo se leen en cada petición).
+
+workflow:
+  rules:
+    # Pipelines de merge request, de la rama principal y de tags; se evitan
+    # pipelines duplicados de rama cuando ya hay una MR abierta.
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+stages:
+  - verify
+  - build
+
+default:
+  image: node:24-slim
+  # El único runner compartido en línea solo acepta jobs con esta tag.
+  tags: [cloudrun]
+  interruptible: true
+  before_script:
+    - cd reparto-gastos
+    - npm ci --prefer-offline --no-audit --no-fund
+  cache:
+    key:
+      files:
+        - reparto-gastos/package-lock.json
+    paths:
+      - .npm/
+    policy: pull
+
+variables:
+  npm_config_cache: $CI_PROJECT_DIR/.npm
+  NEXT_TELEMETRY_DISABLED: "1"
+  CI: "true"
+
+lint:
+  stage: verify
+  # El primer job descarga las dependencias y rellena la caché de npm.
+  cache:
+    key:
+      files:
+        - reparto-gastos/package-lock.json
+    paths:
+      - .npm/
+    policy: pull-push
+  script:
+    - npm run lint
+
+typecheck:
+  stage: verify
+  script:
+    - npm run typecheck
+
+test:
+  stage: verify
+  script:
+    - npm test -- --reporter=default --reporter=junit --outputFile.junit=junit.xml
+  artifacts:
+    when: always
+    reports:
+      junit: reparto-gastos/junit.xml
+    expire_in: 1 week
+
+build:
+  stage: build
+  needs: [lint, typecheck, test]
+  variables:
+    # Falla rápido en vez de esperar 30 s al intento de conexión del build.
+    MONGODB_URI: "mongodb://127.0.0.1:27017/?serverSelectionTimeoutMS=1000"
+  cache:
+    - key:
+        files:
+          - reparto-gastos/package-lock.json
+      paths:
+        - .npm/
+      policy: pull
+    - key: next-$CI_COMMIT_REF_SLUG
+      paths:
+        - reparto-gastos/.next/cache/
+  script:
+    - npm run build
